@@ -1,55 +1,126 @@
-void setup() {
-  cli(); // pause interrupts
+#define DELTA 4688  // time to send a packet = 300ms * 16MHz / 1024
 
-  // Reset counter1
+struct Payload {
+  uint16_t id;
+  uint8_t seq_num;
+  uint16_t timer;
+  int32_t longitude;
+  int32_t latidute;
+  uint8_t battery;
+  uint8_t vehicle_type;
+  uint8_t price;
+};
+
+Payload receivedData;
+Payload data = { 0x4433, 0, 0, 0x01234567, 0x01234567, 85, 2, 31 };
+
+bool canSleep = 0;  // TODO: use this to prevent the module from falling asleep while sending
+bool awake = 0;
+bool canSend = 0;
+
+void setup() {
+  cli();  // pause interrupts
+  // Set Timer/Counter Control Registers
   TCCR1A = 0;
   TCCR1B = 0;
-  TCNT1  = 0;
-  
-  // Set compare match register
-  OCR1A = 65535;
-
-  // Clear timer on compare match
-  TCCR1B |= (1 << WGM12);
-
-  // Set the prescaler to 1024
-  TCCR1B |= (1 << CS12) | (1 << CS10);
-
+  TCCR1B |= (1 << WGM12);               // clear timer on compare match
+  TCCR1B |= (1 << CS12) | (1 << CS10);  // set the prescaler to 1024
+  // Set Output Compare Register
+  OCR1A = 0xFFFF;  // (T = 4.194s)
+  // Reset Timer/Counter
+  TCNT1 = 0;
   // Enable timer interrupt
   TIMSK1 |= (1 << OCIE1A);
+  sei();  // enable interrupts
 
-  sei(); // enable interrupts
+  randomSeed(analogRead(0));
+  Serial.begin(115200);  // laptop
+  Serial1.begin(9600);   // LoRa module
+  delay(200);
 
-  Serial.begin(9600);  // Serial communication with the laptop
-  Serial1.begin(9600);  // Serial communication with the LoRa module
+  pinMode(13, OUTPUT);  // low=sleep, high=wake
+  digitalWrite(13, HIGH);
 
-  pinMode(13, OUTPUT); // low=sleep, high=wake
+  // Ensure TDT mode
+  delay(200);
+  Serial1.print("+++\r\n");
+  delay(200);
+  Serial1.print("AT+EXIT\r\n");
+  delay(200);
+
+  // read OKs
+  while (Serial1.available() > 0) {
+    char data = Serial1.read();
+    Serial.write(data);
+  }
+
+  Serial.println("Start sync sequence...");
+  bool received = 0;
+  unsigned long startMillis = millis();
+  while (millis() - startMillis < 10000 && !received) {
+    if (Serial1.available() > 0) {
+      int out = Serial1.readBytes((uint8_t*)&receivedData, sizeof(Payload));
+      if (receivedData.id != 0) {  // ignore garbage
+        TCNT1 = receivedData.timer;
+        received = 1;
+
+        Serial.print("Received SYNC from ID: ");
+        Serial.println(receivedData.id, HEX);
+      }
+    }
+  }
+
+  data.seq_num = 0;
+  if (received) {  // Follower: wait random time, then broadcast
+    Serial.println("Follower.");
+    unsigned long startMillis = millis();
+    long interval = random(0, 1000);
+    while (millis() - startMillis < interval)
+      ;
+  } else { // Synchronizer
+    Serial.println("Synchronizer.");
+  }
+  // Broadcast your clock
+  data.timer = TCNT1 + DELTA;
+  Serial1.write((uint8_t*)&data, sizeof(data));
+  Serial.println("Sync sequence complete...");
+  canSleep = 1;
 }
 
-bool toggle = 0;
-
-ISR(TIMER1_COMPA_vect) { // timer1
-  if (toggle){
-    digitalWrite(13,LOW);
-    toggle = 0;
-  }
-  else{
-    digitalWrite(13,HIGH);
-    toggle = 1;
+ISR(TIMER1_COMPA_vect) {  // timer1
+  if (canSleep) {
+    if (awake) {
+      digitalWrite(13, LOW);
+      awake = 0;
+    } else {
+      digitalWrite(13, HIGH);
+      while (Serial1.available() > 0) {
+        char t = Serial1.read();
+      }
+      awake = 1;
+      canSend = 1;
+    }
   }
 }
 
 void loop() {
+  if (canSend) {  // every time you wake up
+    delay(10);
 
-  // If data is available from the LoRa module (Serial1), send it to the Serial Monitor
-  if (Serial1.available()) {
-    char data = Serial1.read();
-    Serial.write(data);  // Relay to Serial Monitor
+    Serial.println("Sending...");
+    data.seq_num++;
+    data.timer = TCNT1 + DELTA;
+    Serial1.write((uint8_t*)&data, sizeof(data));
+    canSend = 0;
   }
 
-  // If data is available from the Serial Monitor (USB-C), send it to the LoRa module 
-  if (Serial.available()) {
-    char data = Serial.read();
-    Serial1.write(data);  // Relay to LoRa module
+  if (Serial1.available() > 0) {
+    int out = Serial1.readBytes((uint8_t*)&receivedData, sizeof(Payload));
+    if (receivedData.id != 0) {  // ignore garbage
+      Serial.print("ID: ");
+      Serial.println(receivedData.id, HEX);
+
+      // TODO: store packet in queue to relay it
+    }
   }
 }
