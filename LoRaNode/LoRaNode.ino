@@ -1,24 +1,17 @@
+#include "application.h"
+
 #define DELTA 4688  // time to send a packet = 300ms * 16MHz / 1024
 
-struct Payload {
-  uint16_t id;
-  uint8_t seq_num;
-  uint16_t timer;
-  int32_t longitude;
-  int32_t latidute;
-  uint8_t battery;
-  uint8_t vehicle_type;
-  uint8_t price;
-};
-
+NodeManager node;
 Payload receivedData;
-Payload data = { 0x4433, 0, 0, 0x01234567, 0x01234567, 85, 2, 31 };
 
 bool canSleep = 0;  // TODO: use this to prevent the module from falling asleep while sending
 bool awake = 0;
 bool canSend = 0;
 
 void setup() {
+  node.data = { 0x4433, 0, 0, 1234.5678, 1234.5678, 85, 2, 31, 0 };
+
   cli();  // pause interrupts
   // Set Timer/Counter Control Registers
   TCCR1A = 0;
@@ -70,7 +63,7 @@ void setup() {
     }
   }
 
-  data.seq_num = 0;
+  node.data.seq_num = 0;
   if (received) {  // Follower: wait random time, then broadcast
     Serial.println("Follower.");
     unsigned long startMillis = millis();
@@ -81,8 +74,8 @@ void setup() {
     Serial.println("Synchronizer.");
   }
   // Broadcast your clock
-  data.timer = TCNT1 + DELTA;
-  Serial1.write((uint8_t*)&data, sizeof(data));
+  node.data.timer = TCNT1 + DELTA;
+  Serial1.write((uint8_t*)&node.data, sizeof(Payload));
   Serial.println("Sync sequence complete...");
   canSleep = 1;
 }
@@ -108,9 +101,9 @@ void loop() {
     delay(10);
 
     Serial.println("Sending...");
-    data.seq_num++;
-    data.timer = TCNT1 + DELTA;
-    Serial1.write((uint8_t*)&data, sizeof(data));
+    node.data.seq_num++;
+    node.data.timer = TCNT1 + DELTA;
+    Serial1.write((uint8_t*)&node.data, sizeof(Payload));
     canSend = 0;
   }
 
@@ -120,7 +113,25 @@ void loop() {
       Serial.print("ID: ");
       Serial.println(receivedData.id, HEX);
 
-      // TODO: store packet in queue to relay it
+      bool distance_check = node.checkDistance(receivedData);
+      bool sequence_check = node.checkSequence(receivedData);
+
+      if (receivedData.command == Payload::COMMAND::UPDATE) {
+        // Check both sequence and distance before update
+        if (distance_check && sequence_check) {
+          node.update(receivedData);
+          // TODO: Flooding received data
+        }
+      }
+
+      if (receivedData.command == Payload::COMMAND::PURGE) {
+        // Purge data regardless of distance
+        if (node.checkRecord(receivedData.id)) {
+          // If record exist, purge and flood received data
+          node.purge(receivedData.id);
+          // TODO: Flooding received data
+        }
+      }
     }
   }
 }
