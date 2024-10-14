@@ -1,4 +1,4 @@
-#define DELTA 4688  // time to send a packet = 300ms * 16MHz / 1024
+#define DELTA 20000
 
 struct Payload {
   uint16_t id;
@@ -15,7 +15,7 @@ Payload receivedData;
 Payload data = { 0x4433, 0, 0, 0x01234567, 0x01234567, 85, 2, 31 };
 
 bool canSleep = 0;  // TODO: use this to prevent the module from falling asleep while sending
-bool awake = 0;
+bool awake = 1;
 bool canSend = 0;
 
 void setup() {
@@ -61,7 +61,7 @@ void setup() {
     if (Serial1.available() > 0) {
       int out = Serial1.readBytes((uint8_t*)&receivedData, sizeof(Payload));
       if (receivedData.id != 0) {  // ignore garbage
-        TCNT1 = receivedData.timer;
+        TCNT1 = receivedData.timer + DELTA;
         received = 1;
 
         Serial.print("Received SYNC from ID: ");
@@ -77,11 +77,11 @@ void setup() {
     long interval = random(0, 1000);
     while (millis() - startMillis < interval)
       ;
-  } else { // Synchronizer
+  } else {  // Synchronizer
     Serial.println("Synchronizer.");
   }
   // Broadcast your clock
-  data.timer = TCNT1 + DELTA;
+  data.timer = TCNT1;
   Serial1.write((uint8_t*)&data, sizeof(data));
   Serial.println("Sync sequence complete...");
   canSleep = 1;
@@ -109,7 +109,7 @@ void loop() {
 
     Serial.println("Sending...");
     data.seq_num++;
-    data.timer = TCNT1 + DELTA;
+    data.timer = TCNT1;
     Serial1.write((uint8_t*)&data, sizeof(data));
     canSend = 0;
   }
@@ -124,3 +124,4 @@ void loop() {
     }
   }
 }
+
