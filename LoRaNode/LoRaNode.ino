@@ -4,7 +4,7 @@ LoRaNode node;
 Payload receivedData;
 
 bool canSleep = 0;  // TODO: use this to prevent the module from falling asleep while sending
-bool awake = 0;
+bool awake = 1;
 bool canSend = 0;
 
 void setup() {
@@ -52,7 +52,7 @@ void setup() {
     if (Serial1.available() > 0) {
       int out = Serial1.readBytes((uint8_t*)&receivedData, sizeof(Payload));
       if (receivedData.id != 0) {  // ignore garbage
-        TCNT1 = receivedData.timer;
+        TCNT1 = receivedData.timer + DELTA;
         received = 1;
 
         Serial.print("Received SYNC from ID: ");
@@ -72,8 +72,8 @@ void setup() {
     Serial.println("Synchronizer.");
   }
   // Broadcast your clock
-  node.data.timer = TCNT1 + DELTA;
-  Serial1.write((uint8_t*)&node.data, sizeof(Payload));
+  data.timer = TCNT1;
+  Serial1.write((uint8_t*)&data, sizeof(data));
   Serial.println("Sync sequence complete...");
   canSleep = 1;
 }
@@ -99,9 +99,9 @@ void loop() {
     delay(10);
 
     Serial.println("Sending...");
-    node.data.seq_num++;
-    node.data.timer = TCNT1 + DELTA;
-    Serial1.write((uint8_t*)&node.data, sizeof(Payload));
+    data.seq_num++;
+    data.timer = TCNT1;
+    Serial1.write((uint8_t*)&data, sizeof(data));
     canSend = 0;
   }
 
