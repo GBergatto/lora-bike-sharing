@@ -1,24 +1,15 @@
-#define DELTA 20000
+#include "application.h"
 
-struct Payload {
-  uint16_t id;
-  uint8_t seq_num;
-  uint16_t timer;
-  int32_t longitude;
-  int32_t latidute;
-  uint8_t battery;
-  uint8_t vehicle_type;
-  uint8_t price;
-};
-
+LoRaNode node;
 Payload receivedData;
-Payload data = { 0x4433, 0, 0, 0x01234567, 0x01234567, 85, 2, 31 };
 
 bool canSleep = 0;  // TODO: use this to prevent the module from falling asleep while sending
 bool awake = 1;
 bool canSend = 0;
 
 void setup() {
+  node.data = { 0x4433, 0, 0, 1234.5678, 1234.5678, 85, 2, 31, 0 };
+
   cli();  // pause interrupts
   // Set Timer/Counter Control Registers
   TCCR1A = 0;
@@ -70,7 +61,7 @@ void setup() {
     }
   }
 
-  data.seq_num = 0;
+  node.data.seq_num = 0;
   if (received) {  // Follower: wait random time, then broadcast
     Serial.println("Follower.");
     unsigned long startMillis = millis();
@@ -120,8 +111,10 @@ void loop() {
       Serial.print("ID: ");
       Serial.println(receivedData.id, HEX);
 
-      // TODO: store packet in queue to relay it
+      node.handleMessage(receivedData);
+
+      // TODO: Flooding received data
+      // check sequence number and computeDistance() < LIMIT_DISTANCE
     }
   }
 }
-
