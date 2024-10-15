@@ -1,8 +1,6 @@
 #include "application.h"
 
-#define DELTA 4688  // time to send a packet = 300ms * 16MHz / 1024
-
-NodeManager node;
+LoRaNode node;
 Payload receivedData;
 
 bool canSleep = 0;  // TODO: use this to prevent the module from falling asleep while sending
@@ -70,7 +68,7 @@ void setup() {
     long interval = random(0, 1000);
     while (millis() - startMillis < interval)
       ;
-  } else { // Synchronizer
+  } else {  // Synchronizer
     Serial.println("Synchronizer.");
   }
   // Broadcast your clock
@@ -113,25 +111,10 @@ void loop() {
       Serial.print("ID: ");
       Serial.println(receivedData.id, HEX);
 
-      bool distance_check = node.checkDistance(receivedData);
-      bool sequence_check = node.checkSequence(receivedData);
+      node.handleMessage(receivedData);
 
-      if (receivedData.command == Payload::COMMAND::UPDATE) {
-        // Check both sequence and distance before update
-        if (distance_check && sequence_check) {
-          node.update(receivedData);
-          // TODO: Flooding received data
-        }
-      }
-
-      if (receivedData.command == Payload::COMMAND::PURGE) {
-        // Purge data regardless of distance
-        if (node.checkRecord(receivedData.id)) {
-          // If record exist, purge and flood received data
-          node.purge(receivedData.id);
-          // TODO: Flooding received data
-        }
-      }
+      // TODO: Flooding received data
+      // check sequence number and computeDistance() < LIMIT_DISTANCE
     }
   }
 }
