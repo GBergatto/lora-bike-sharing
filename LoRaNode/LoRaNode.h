@@ -36,6 +36,9 @@ struct Payload {
   uint8_t command;
 };
 
+inline float cvt2Decimal(float deg, float min, float sec, char dir);
+inline float cvtDeg2Rad(float deg);
+
 class LoRaNode {
   Payload table[TABLE_SIZE];
 

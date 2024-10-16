@@ -8,7 +8,45 @@ bool awake = 1;
 bool canSend = 0;
 
 void setup() {
-  node.data = { 0x0100, 0, 0, 51.4484378, 5.494187, 85, 2, 31, UPDATE };
+  // Hardcode GPS data based on Google Earth 
+  // Bike 1
+  uint16_t id = 1;
+  uint8_t vehicle_type = VEHICLE_TYPE::BICYCLE;
+  float latitude = cvtDeg2Rad(cvt2Decimal(51.0f, 26.0f, 52.0f, 'N'));
+  float longitude = cvtDeg2Rad(cvt2Decimal(5.0f, 29.0f, 3.0f, 'E'));
+
+  // // Bike 2
+  // uint16_t id = 2;
+  // uint8_t vehicle_type = VEHICLE_TYPE::BICYCLE;
+  // float latitude = cvtDeg2Rad(cvt2Decimal(51.0f, 26.0f, 49.0f, 'N'));
+  // float longitude = cvtDeg2Rad(cvt2Decimal(5.0f, 29.0f, 30.0f, 'E'));
+
+  // // E Bike 3
+  // uint16_t id = 3;
+  // uint8_t vehicle_type = VEHICLE_TYPE::ELECTRIC_BICYCLE;
+  // float latitude = cvtDeg2Rad(cvt2Decimal(51.0f, 27.0f, 0.0f, 'N'));
+  // float longitude = cvtDeg2Rad(cvt2Decimal(5.0f, 29.0f, 28.0f, 'E'));
+
+  // // E bike 4
+  // uint16_t id = 4;
+  // uint8_t vehicle_type = VEHICLE_TYPE::ELECTRIC_BICYCLE;
+  // float latitude = cvtDeg2Rad(cvt2Decimal(51.0f, 26.0f, 53.0f, 'N'));
+  // float longitude = cvtDeg2Rad(cvt2Decimal(5.0f, 29.0f, 43.0f, 'E'));
+
+  // // Cargo bike 5
+  // uint16_t id = 5;
+  // uint8_t vehicle_type = VEHICLE_TYPE::CARGO_BICYCLE;
+  // float latitude = cvtDeg2Rad(cvt2Decimal(51.0f, 26.0f, 48.0f, 'N'));
+  // float longitude = cvtDeg2Rad(cvt2Decimal(5.0f, 29.0f, 32.0f, 'E'));
+
+  // // Motorbike 6
+  // uint16_t id = 6;
+  // uint8_t vehicle_type = VEHICLE_TYPE::MOTORCYCLE;
+  // float latitude = cvtDeg2Rad(cvt2Decimal(51.0f, 26.0f, 51.0f, 'N'));
+  // float longitude = cvtDeg2Rad(cvt2Decimal(5.0f, 28.0f, 38.0f, 'E'));
+
+  node.data = { id, 0, 0, longitude, latitude, 85, 
+                vehicle_type, 31, UPDATE };
 
   cli();  // pause interrupts
   // Set Timer/Counter Control Registers

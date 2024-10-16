@@ -1,5 +1,22 @@
 #include "LoRaNode.h"
 
+/**
+ * Some function to convert GPS type (deg, min, sec) to radian
+ */
+float cvt2Decimal(float deg, float min, float sec, char dir)
+{
+  float out = deg + min / 60.0f + sec / 3600.0f;
+  if (dir == 'S' || dir == 'W')
+    return -out;
+
+  return out;
+}
+
+float cvtDeg2Rad(float deg)
+{
+  return deg * M_PI / 180.0f;
+}
+
 LoRaNode::LoRaNode() {
   tableTail = 0;
   qhead = 0;
@@ -96,7 +113,10 @@ int LoRaNode::enqueue(const Payload &message) {
   if (qsize == QUEUE_SIZE) {
     return -1;
   } else {
-    if (computeDistance(message.longitude, message.latitude) > LIMIT_DISTANCE) {
+    float d = computeDistance(message.longitude, message.latitude)
+    Serial.print("Distance to source node: ");
+    Serial.println(d);
+    if (d > LIMIT_DISTANCE) {
       return -2;  // too far away to relay information
     }
 
