@@ -7,20 +7,21 @@
 #define DELTA 20000
 
 #define TABLE_SIZE 64
+#define QUEUE_SIZE 16
 
-#define LIMIT_DISTANCE 2.0  // km
+#define LIMIT_DISTANCE 1.0  // km
 #define EARTH_RADIUS 6371   // km
 
 enum COMMAND {
-  UPDATE = 1,
-  PURGE = 2,
+  UPDATE,
+  PURGE,
 };
 
 enum VEHICLE_TYPE {
-  BICYCLE = 0,
-  ELECTRIC_BICYCLE = 1,
-  CARGO_BICYCLE = 2,
-  MOTORCYCLE = 3,
+  BICYCLE,
+  ELECTRIC_BICYCLE,
+  CARGO_BICYCLE,
+  MOTORCYCLE,
 };
 
 struct Payload {
@@ -37,19 +38,25 @@ struct Payload {
 
 class LoRaNode {
   Payload table[TABLE_SIZE];
-  int tail = 0;
 
+  Payload queue[QUEUE_SIZE];
+  int qhead, qtail, qsize;
+
+  float computeDistance(float longitude, float latitude);
   int getIndex(uint16_t id);
   void update(const Payload &new_data);
   void purge(uint16_t id);
+  bool isQueueFull();
 
 public:
+  int tableTail;
   Payload data;
 
-  Node();
-  void handleMessage(const Payload &message);
+  LoRaNode();
   bool checkSequence(uint16_t id, uint8_t seq_num);
-  float computeDistance(float longitude, float latitude);
+  void handleMessage(const Payload &message);
+  int enqueue(const Payload &message);
+  int dequeue(Payload *message);
 };
 
 #endif

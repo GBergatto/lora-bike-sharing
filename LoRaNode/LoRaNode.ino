@@ -1,14 +1,14 @@
-#include "application.h"
+#include "LoRaNode.h"
 
 LoRaNode node;
-Payload receivedData;
+Payload buffer;
 
 bool canSleep = 0;  // TODO: use this to prevent the module from falling asleep while sending
 bool awake = 1;
 bool canSend = 0;
 
 void setup() {
-  node.data = { 0x4433, 0, 0, 1234.5678, 1234.5678, 85, 2, 31, 0 };
+  node.data = { 0x0100, 0, 0, 51.4484378, 5.494187, 85, 2, 31, UPDATE };
 
   cli();  // pause interrupts
   // Set Timer/Counter Control Registers
@@ -50,13 +50,13 @@ void setup() {
   unsigned long startMillis = millis();
   while (millis() - startMillis < 10000 && !received) {
     if (Serial1.available() > 0) {
-      int out = Serial1.readBytes((uint8_t*)&receivedData, sizeof(Payload));
-      if (receivedData.id != 0) {  // ignore garbage
-        TCNT1 = receivedData.timer + DELTA;
+      int out = Serial1.readBytes((uint8_t*)&buffer, sizeof(Payload));
+      if (buffer.id != 0) {  // ignore garbage
+        TCNT1 = buffer.timer + DELTA;
         received = 1;
 
         Serial.print("Received SYNC from ID: ");
-        Serial.println(receivedData.id, HEX);
+        Serial.println(buffer.id, HEX);
       }
     }
   }
@@ -72,8 +72,8 @@ void setup() {
     Serial.println("Synchronizer.");
   }
   // Broadcast your clock
-  data.timer = TCNT1;
-  Serial1.write((uint8_t*)&data, sizeof(data));
+  node.data.timer = TCNT1;
+  Serial1.write((uint8_t*)&(node.data), sizeof(Payload));
   Serial.println("Sync sequence complete...");
   canSleep = 1;
 }
@@ -98,23 +98,49 @@ void loop() {
   if (canSend) {  // every time you wake up
     delay(10);
 
-    Serial.println("Sending...");
-    data.seq_num++;
-    data.timer = TCNT1;
-    Serial1.write((uint8_t*)&data, sizeof(data));
+    Serial.println("Broadcasting...");
+    node.data.seq_num++;
+    node.data.timer = TCNT1;
+    Serial1.write((uint8_t*)&(node.data), sizeof(Payload));
     canSend = 0;
   }
 
+  if (awake) {
+    int out = node.dequeue(&buffer);
+    if (out != -1) {
+      Serial.print("Relaying packet ");
+      Serial.print(buffer.seq_num);
+      Serial.print(" from ");
+      Serial.print(buffer.id, HEX);
+      Serial.print("... (");
+      Serial.print(out);
+      Serial.println(") left in the queue");
+
+      buffer.timer = TCNT1;
+      Serial1.write((uint8_t*)&(buffer), sizeof(Payload));
+    }
+  }
+
   if (Serial1.available() > 0) {
-    int out = Serial1.readBytes((uint8_t*)&receivedData, sizeof(Payload));
-    if (receivedData.id != 0) {  // ignore garbage
+    int out = Serial1.readBytes((uint8_t*)&buffer, sizeof(Payload));
+    if (buffer.id != 0) {  // ignore garbage
       Serial.print("ID: ");
-      Serial.println(receivedData.id, HEX);
+      Serial.println(buffer.id, HEX);
 
-      node.handleMessage(receivedData);
+      if (buffer.id != node.data.id && node.checkSequence(buffer.id, buffer.seq_num)) {  // ignore maessage about yourself
+        node.handleMessage(buffer);
+        Serial.print("Table size = ");
+        Serial.println(node.tableTail);
 
-      // TODO: Flooding received data
-      // check sequence number and computeDistance() < LIMIT_DISTANCE
+        int out = node.enqueue(buffer);
+        if (out == -1) {
+          Serial.println("Queue full! Message dropped.");
+        } else if (out == -2) {
+          Serial.println("Bike was too far away to be relayed");
+        } else {
+          Serial.println("Added to queue");
+        }
+      }
     }
   }
 }

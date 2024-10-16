@@ -1,4 +1,11 @@
-#include "application.h"
+#include "LoRaNode.h"
+
+LoRaNode::LoRaNode() {
+  tableTail = 0;
+  qhead = 0;
+  qtail = -1;
+  qsize = 0;
+}
 
 void LoRaNode::handleMessage(const Payload &message) {
   // TODO: use the highest bit of vehicle type instead
@@ -33,7 +40,7 @@ float LoRaNode::computeDistance(float longitude, float latitude) {
 bool LoRaNode::checkSequence(uint16_t id, uint8_t seq_num) {
   for (int i = 0; i < TABLE_SIZE; i++) {
     if (table[i].id == id) {
-      return (table[i].seq_num < seq_num);
+      return (table[i].seq_num < seq_num || table[i].seq_num == 0xFF);
     }
   }
   return true;  // no matching ID in the table
@@ -60,8 +67,8 @@ void LoRaNode::update(const Payload &newRecord) {
   if (i != -1) {  // update existing record
     table[i] = newRecord;
   } else {  // new record
-    if (tail < TABLE_SIZE) {
-      table[tail++] = newRecord;
+    if (tableTail < TABLE_SIZE) {
+      table[tableTail++] = newRecord;
     } else {
       // TODO: replace record of the furthest away bike with new_data
     }
@@ -73,9 +80,46 @@ void LoRaNode::update(const Payload &newRecord) {
  */
 void LoRaNode::purge(uint16_t id) {
   if (getIndex(id) != -1) {
-    for (int i = id; i < tail; i++) {
+    for (int i = id; i < tableTail; i++) {
       table[i] = table[i + 1];
     }
+    tableTail--;
   }
-  tail--;
+}
+
+/**
+* Add record to the queue
+* Return: -1 if operation failed, -2 if distance limit was exceeded,
+*         otherwise number of records in the queue
+*/
+int LoRaNode::enqueue(const Payload &message) {
+  if (qsize == QUEUE_SIZE) {
+    return -1;
+  } else {
+    if (computeDistance(message.longitude, message.latitude) > LIMIT_DISTANCE) {
+      return -2;  // too far away to relay information
+    }
+
+    // TODO: remove outdated messages (same id and smaller seq_number) from the queue
+
+    qtail = (qtail + 1) % QUEUE_SIZE;
+    queue[qtail] = message;
+
+    return ++qsize;
+  }
+}
+
+/**
+* Add record to the queue
+* Return: -1 if queue was empty, otherwise number of records in the queue
+*/
+int LoRaNode::dequeue(Payload *message) {
+  if (qsize == 0) {
+    return -1;
+  }
+
+  *message = queue[qhead];
+  qhead = (qhead + 1) % QUEUE_SIZE;
+
+  return --qsize;
 }
