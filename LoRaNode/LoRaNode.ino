@@ -8,7 +8,7 @@ bool awake = 1;
 bool canSend = 0;
 
 void setup() {
-  node.data = { 0x0100, 0, 0, 51.4484378, 5.494187, 85, 2, 31, UPDATE };
+  node.data = { 0x0100, 0, 0, 51.4484378, 5.494187, SET_C_BATTERY(85, UPDATE), 2, 31 };
 
   cli();  // pause interrupts
   // Set Timer/Counter Control Registers

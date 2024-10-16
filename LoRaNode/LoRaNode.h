@@ -12,6 +12,10 @@
 #define LIMIT_DISTANCE 1.0  // km
 #define EARTH_RADIUS 6371   // km
 
+#define GET_BATTERY(byte) ((byte)&0x7F)
+#define GET_FLAG(byte) (((byte)&0x80) != 0)  // update/purge
+#define SET_C_BATTERY(battery, command)  ((battery & 0x7F) | (command ? 0x80 : 0x00))
+
 enum COMMAND {
   UPDATE,
   PURGE,
@@ -30,10 +34,9 @@ struct Payload {
   uint16_t timer;
   float longitude;
   float latitude;
-  uint8_t battery;
+  uint8_t c_battery;  // the highest bit contains the command flag
   uint8_t vehicle_type;
   uint8_t price;
-  uint8_t command;
 };
 
 class LoRaNode {

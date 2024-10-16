@@ -9,7 +9,7 @@ LoRaNode::LoRaNode() {
 
 void LoRaNode::handleMessage(const Payload &message) {
   // TODO: use the highest bit of vehicle type instead
-  if (message.command == UPDATE) {
+  if (GET_FLAG(message.c_battery) == UPDATE) {
     if (checkSequence(message.id, message.seq_num)) {
       update(message);
     }
