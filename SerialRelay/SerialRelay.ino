@@ -1,6 +1,9 @@
 void setup() {
   Serial.begin(115200);  // Serial communication with the laptop
   Serial1.begin(9600);  // Serial communication with the LoRa module
+
+  pinMode(13, OUTPUT);  // low=sleep, high=wake
+  digitalWrite(13, HIGH);
 }
 
 void loop() {
