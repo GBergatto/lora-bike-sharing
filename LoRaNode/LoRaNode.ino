@@ -8,7 +8,7 @@ bool awake = 1;
 bool canSend = 0;
 
 void setup() {
-  // Hardcode GPS data based on Google Earth 
+  // Hardcode GPS data based on Google Earth
   // Bike 1
   uint16_t id = 1;
   uint8_t vehicle_type = VEHICLE_TYPE::BICYCLE;
@@ -45,7 +45,7 @@ void setup() {
   // float latitude = 51.447705;
   // float longitude = 5.477378;
 
-  node.data = { id, 0, 0, longitude, latitude, SET_C_BATTERY(85, UPDATE), 
+  node.data = { id, 0, 0, latitude, longitude, SET_C_BATTERY(85, UPDATE),
                 vehicle_type, 31 };
 
   cli();  // pause interrupts
