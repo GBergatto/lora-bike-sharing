@@ -45,8 +45,8 @@ void setup() {
   // float latitude = 51.447705;
   // float longitude = 5.477378;
 
-  node.data = { id, 0, 0, longitude, latitude, 85, 
-                vehicle_type, 31, UPDATE };
+  node.data = { id, 0, 0, longitude, latitude, SET_C_BATTERY(85, UPDATE), 
+                vehicle_type, 31 };
 
   cli();  // pause interrupts
   // Set Timer/Counter Control Registers
