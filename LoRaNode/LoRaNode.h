@@ -14,7 +14,7 @@
 
 #define GET_BATTERY(byte) ((byte)&0x7F)
 #define GET_FLAG(byte) (((byte)&0x80) != 0)  // update/purge
-#define SET_C_BATTERY(battery, command)  ((battery & 0x7F) | (command ? 0x80 : 0x00))
+#define SET_C_BATTERY(battery, command) ((battery & 0x7F) | (command ? 0x80 : 0x00))
 
 enum COMMAND {
   UPDATE,
@@ -32,8 +32,8 @@ struct Payload {
   uint16_t id;
   uint8_t seq_num;
   uint16_t timer;
-  float longitude;
   float latitude;
+  float longitude;
   uint8_t c_battery;  // the highest bit contains the command flag
   uint8_t vehicle_type;
   uint8_t price;
@@ -45,7 +45,7 @@ class LoRaNode {
   Payload queue[QUEUE_SIZE];
   int qhead, qtail, qsize;
 
-  float computeDistance(float longitude, float latitude);
+  float computeDistance(float latitude, float longitude);
   int getIndex(uint16_t id);
   void update(const Payload &new_data);
   void purge(uint16_t id);

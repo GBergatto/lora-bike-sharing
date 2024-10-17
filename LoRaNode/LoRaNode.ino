@@ -8,7 +8,45 @@ bool awake = 1;
 bool canSend = 0;
 
 void setup() {
-  node.data = { 0x0100, 0, 0, 51.4484378, 5.494187, SET_C_BATTERY(85, UPDATE), 2, 31 };
+  // Hardcode GPS data based on Google Earth
+  // Bike 1
+  uint16_t id = 1;
+  uint8_t vehicle_type = VEHICLE_TYPE::BICYCLE;
+  float latitude = 51.447905;
+  float longitude = 5.484327;
+
+  // // Bike 2
+  // uint16_t id = 2;
+  // uint8_t vehicle_type = VEHICLE_TYPE::BICYCLE;
+  // float latitude = 51.447179;
+  // float longitude = 5.491909;
+
+  // // E Bike 3
+  // uint16_t id = 3;
+  // uint8_t vehicle_type = VEHICLE_TYPE::ELECTRIC_BICYCLE;
+  // float latitude = 51.450170;
+  // float longitude = 5.491234;
+
+  // // E bike 4
+  // uint16_t id = 4;
+  // uint8_t vehicle_type = VEHICLE_TYPE::ELECTRIC_BICYCLE;
+  // float latitude = 51.448100;
+  // float longitude = 5.495445;
+
+  // // Cargo bike 5
+  // uint16_t id = 5;
+  // uint8_t vehicle_type = VEHICLE_TYPE::CARGO_BICYCLE;
+  // float latitude = 51.446806;
+  // float longitude = 5.492243;
+
+  // // Motorbike 6
+  // uint16_t id = 6;
+  // uint8_t vehicle_type = VEHICLE_TYPE::MOTORCYCLE;
+  // float latitude = 51.447705;
+  // float longitude = 5.477378;
+
+  node.data = { id, 0, 0, latitude, longitude, SET_C_BATTERY(85, UPDATE),
+                vehicle_type, 31 };
 
   cli();  // pause interrupts
   // Set Timer/Counter Control Registers

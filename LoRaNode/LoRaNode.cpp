@@ -22,12 +22,18 @@ void LoRaNode::handleMessage(const Payload &message) {
  * Compute distance from this node to the source data's node
  * return: distance in (km)
  */
-float LoRaNode::computeDistance(float longitude, float latitude) {
-  // Using Haversine formular
-  float dlat = latitude - data.latitude;
-  float dlon = longitude - data.longitude;
+float LoRaNode::computeDistance(float latitude, float longitude) {
+  // Convert to rad
+  longitude *= M_PI / 180.0f;
+  latitude *= M_PI / 180.0f;
+  float my_longitude = data.longitude * M_PI / 180.0f;
+  float my_latitude = data.latitude * M_PI / 180.0f;
 
-  float a = pow(sin(dlat / 2), 2) + cos(data.latitude) * cos(latitude) * pow(sin(dlon / 2), 2);
+  // Using Haversine formular
+  float dlat = latitude - my_latitude;
+  float dlon = longitude - my_longitude;
+
+  float a = pow(sin(dlat / 2), 2) + cos(my_latitude) * cos(latitude) * pow(sin(dlon / 2), 2);
   float c = 2 * atan2(sqrt(a), sqrt(1 - a));
 
   return EARTH_RADIUS * c;
@@ -96,7 +102,10 @@ int LoRaNode::enqueue(const Payload &message) {
   if (qsize == QUEUE_SIZE) {
     return -1;
   } else {
-    if (computeDistance(message.longitude, message.latitude) > LIMIT_DISTANCE) {
+    float d = computeDistance(message.latitude, message.longitude);
+    Serial.print("Distance to source node: ");
+    Serial.println(d);
+    if (d > LIMIT_DISTANCE) {
       return -2;  // too far away to relay information
     }
 
